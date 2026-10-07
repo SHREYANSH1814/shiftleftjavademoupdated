@@ -2,10 +2,7 @@ package io.shiftleft.controller;
 
 import io.shiftleft.model.AuthToken;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import javax.servlet.http.Cookie;
@@ -31,10 +28,16 @@ public class AdminController {
   private boolean isAdmin(String auth)
   {
     try {
-      ByteArrayInputStream bis = new ByteArrayInputStream(Base64.getDecoder().decode(auth));
-      ObjectInputStream objectInputStream = new ObjectInputStream(bis);
-      Object authToken = objectInputStream.readObject();
-      return ((AuthToken) authToken).isAdmin();
+      byte[] decoded = Base64.getDecoder().decode(auth);
+      String json = new String(decoded, StandardCharsets.UTF_8);
+      // Expecting JSON string representing AuthToken
+      // Simple check for isAdmin field in JSON
+      // This assumes AuthToken has a field "admin" or "isAdmin" boolean
+      // For demonstration, parse manually
+      if (json.contains("\"admin\":true") || json.contains("\"isAdmin\":true")) {
+        return true;
+      }
+      return false;
     } catch (Exception ex) {
       System.out.println(" cookie cannot be deserialized: "+ex.getMessage());
       return false;
@@ -103,10 +106,9 @@ public class AdminController {
       if(pass[1] != null && pass[1].length()>0 && pass[1].equals("shiftleftsecret"))
       {
         AuthToken authToken = new AuthToken(AuthToken.ADMIN);
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(bos);
-        oos.writeObject(authToken);
-        String cookieValue = new String(Base64.getEncoder().encode(bos.toByteArray()));
+        // Serialize AuthToken as JSON string instead of Java serialization
+        String json = "{\"admin\":true}";
+        String cookieValue = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
         response.addCookie(new Cookie("auth", cookieValue ));
 
         // cookie is lost after redirection
